@@ -70,7 +70,6 @@ class ReservationLuaScriptIT {
         List<Future<Boolean>> results = new ArrayList<>();
 
         for (int i = 0; i < attempts; i++) {
-            int attempt = i;
 
             results.add(executor.submit(new Callable<Boolean>() {
                 @Override
