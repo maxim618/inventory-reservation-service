@@ -14,6 +14,12 @@ public class ReservationLuaScript {
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> script;
 
+    /**
+     * Lua script contract:
+     *  - returns 1  → reservation succeeded (or idempotent retry)
+     *  - returns 0  → insufficient stock
+     *  - returns nil → execution error
+     */
 
     public ReservationLuaScript(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -27,7 +33,7 @@ public class ReservationLuaScript {
         this.script.setResultType(Long.class);
     }
 
-     // return true если резерв успешен
+    // return true если резерв успешен
     public boolean reserve(
             String stockKey,
             String reservationKey,
@@ -36,7 +42,7 @@ public class ReservationLuaScript {
             int ttlSeconds,
             String reservationId
     ) {
-        Long result =  redisTemplate.execute(
+        Long result = redisTemplate.execute(
                 script,
                 List.of(stockKey, reservationKey, idempotencyKey),
                 String.valueOf(quantity),
