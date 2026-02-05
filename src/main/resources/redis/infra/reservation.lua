@@ -6,6 +6,10 @@
 -- ARGV[2] = ttlSeconds
 -- ARGV[3] = reservationId
 
+-- 1 = SUCCESS
+-- 0 = INSUFFICIENT_STOCK
+-- 2 = IDEMPOTENT_HIT
+
 local stockKey = KEYS[1]
 local reservationKey = KEYS[2]
 local idempotencyKey = KEYS[3]
@@ -16,7 +20,7 @@ local reservationId = ARGV[3]
 
 -- idempotency
 if redis.call("EXISTS", idempotencyKey) == 1 then
-    return 1
+    return 2
 end
 
 local available = tonumber(redis.call("GET", stockKey))
