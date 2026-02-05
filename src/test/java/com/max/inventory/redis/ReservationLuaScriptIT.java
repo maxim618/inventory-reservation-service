@@ -13,6 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -53,7 +54,7 @@ class ReservationLuaScriptIT {
 
     @BeforeEach
     void setUp() {
-        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushDb();
+        Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().serverCommands().flushDb();
         redisTemplate.opsForValue().set(STOCK_KEY, "10"); // склад = 10
 
         System.out.println("INIT KEYS = " + redisTemplate.keys("*"));
@@ -67,13 +68,13 @@ class ReservationLuaScriptIT {
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         CountDownLatch latch = new CountDownLatch(attempts);
 
-        List<Future<Boolean>> results = new ArrayList<>();
+        List<Future<ReservationResult>> results = new ArrayList<>();
 
         for (int i = 0; i < attempts; i++) {
 
-            results.add(executor.submit(new Callable<Boolean>() {
+            results.add(executor.submit(new Callable<ReservationResult>() {
                 @Override
-                public Boolean call() {
+                public ReservationResult call() {
                     try {
                         String reservationId = UUID.randomUUID().toString();
 
@@ -99,11 +100,10 @@ class ReservationLuaScriptIT {
         executor.shutdown();
 
         long successCount = results.stream()
-                .filter(new Predicate<Future<Boolean>>() {
-                    @Override
-                    public boolean test(Future<Boolean> f) {
+                .filter(new Predicate<>() {
+                    public boolean test(Future<ReservationResult> f) {
                         try {
-                            return f.get();
+                            return f.get().equals(ReservationResult.RESERVED);
                         } catch (
                                 CancellationException | InterruptedException | ExecutionException e) {
                             System.err.println(e.getMessage());
@@ -117,5 +117,69 @@ class ReservationLuaScriptIT {
 
         assertThat(successCount).isEqualTo(10);
         assertThat(finalStock).isEqualTo("0");
+    }
+
+    @Test
+    void should_reserve_stock_when_enough_stock_available() {
+        redisTemplate.opsForValue().set("stock:1", "10");
+
+        ReservationResult result = reservationLuaScript.reserve(
+
+                "stock:1",
+                "reservation:123",
+                "idem:123",
+                3,
+                30,
+                "123"
+        );
+
+        assertThat(result).isEqualTo(ReservationResult.RESERVED);
+        assertThat(redisTemplate.opsForValue().get("stock:1")).isEqualTo("7");
+    }
+
+    @Test
+    void should_return_insufficient_stock_when_not_enough_stock() {
+        redisTemplate.opsForValue().set("stock:1", "2");
+
+        ReservationResult result = reservationLuaScript.reserve(
+                "stock:1",
+                "reservation:123",
+                "idem:123",
+                3,
+                30,
+                "123"
+        );
+
+        assertThat(result).isEqualTo(ReservationResult.INSUFFICIENT_STOCK);
+    }
+
+    @Test
+    void should_return_idempotent_when_same_request_called_twice() {
+        redisTemplate.opsForValue().set("stock:1", "10");
+
+        ReservationResult first =
+                reservationLuaScript.reserve(
+                        "stock:1",
+                        "reservation:123",
+                        "idem:123",
+                        3,
+                        30,
+                        "123"
+                );
+
+        ReservationResult second =
+                reservationLuaScript.reserve(
+                        "stock:1",
+                        "reservation:123",
+                        "idem:123",
+                        3,
+                        30,
+                        "123"
+                );
+
+        assertThat(first).isEqualTo(ReservationResult.RESERVED);
+        assertThat(second).isEqualTo(ReservationResult.IDEMPOTENT);
+
+        assertThat(redisTemplate.opsForValue().get("stock:1")).isEqualTo("7");
     }
 }

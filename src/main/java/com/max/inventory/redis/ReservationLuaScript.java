@@ -1,5 +1,6 @@
 package com.max.inventory.redis;
 
+import com.max.inventory.mapper.ReservationResultMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -16,6 +17,7 @@ public class ReservationLuaScript {
 
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> script;
+    private final ReservationResultMapper reservationResultMapper;
 
     /**
      * Lua script contract:
@@ -34,10 +36,11 @@ public class ReservationLuaScript {
                 )
         );
         this.script.setResultType(Long.class);
+        reservationResultMapper = new ReservationResultMapper();
     }
 
     // return true если резерв успешен
-    public boolean reserve(
+    public ReservationResult reserve(
             String stockKey,
             String reservationKey,
             String idempotencyKey,
@@ -48,7 +51,7 @@ public class ReservationLuaScript {
         try {
             log.debug(
                     "Trying to reserve stock. stockKey={}, reservationKey={}, qty={}, hasIdempotencyKey={}",
-                    stockKey, reservationKey, quantity, Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null")
+                    stockKey, reservationKey, quantity, idempotencyKey != null
             );
 
             Long result =  redisTemplate.execute(
@@ -58,39 +61,20 @@ public class ReservationLuaScript {
                     String.valueOf(ttlSeconds),
                     reservationId
             );
+            ReservationResult mapped = reservationResultMapper.map(result);
             log.debug(
-                    "Lua result for stockKey={} is {}",
-                    stockKey, result
+                    "Lua reservation result. stockKey={}, reservationKey={}, result={}",
+                    stockKey, result, mapped
             );
 
-            if (result == null) {
-                log.warn(
-                        "Lua returned null. stockKey={}, reservationKey={}",
-                        stockKey, reservationKey
-                );
-                return false;
-            }
-
-            if (result == 1L) {
-                log.debug(
-                        "Stock reserved successfully. stockKey={}, reservationKey={}",
-                        stockKey, reservationKey
-                );
-                return true;
-            }
-
-            log.debug(
-                    "Stock reservation rejected. stockKey={}, reservationKey={}, luaResult={}",
-                    stockKey, reservationKey, result
-            );
-            return false;
+            return mapped;
 
         } catch (Exception e) {
             log.error(
                     "Lua reservation failed. stockKey={}, reservationKey={}",
                     stockKey, reservationKey, e
             );
-            throw e;
+            return ReservationResult.FAILED;
         }
     }
 }
