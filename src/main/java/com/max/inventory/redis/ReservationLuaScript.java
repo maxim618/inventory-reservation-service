@@ -1,6 +1,8 @@
 package com.max.inventory.redis;
 
 import com.max.inventory.mapper.ReservationResultMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +20,7 @@ public class ReservationLuaScript {
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> script;
     private final ReservationResultMapper reservationResultMapper;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Lua script contract:
@@ -26,8 +29,9 @@ public class ReservationLuaScript {
      *  - returns nil → execution error
      */
 
-    public ReservationLuaScript(StringRedisTemplate redisTemplate) {
+    public ReservationLuaScript(StringRedisTemplate redisTemplate, MeterRegistry meterRegistry) {
         this.redisTemplate = redisTemplate;
+        this.meterRegistry = meterRegistry;
 
         this.script = new DefaultRedisScript<>();
         this.script.setScriptSource(
@@ -48,6 +52,7 @@ public class ReservationLuaScript {
             int ttlSeconds,
             String reservationId
     ) {
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             log.debug(
                     "Trying to reserve stock. stockKey={}, reservationKey={}, qty={}, hasIdempotencyKey={}",
@@ -66,15 +71,30 @@ public class ReservationLuaScript {
                     "Lua reservation result. stockKey={}, reservationKey={}, result={}",
                     stockKey, result, mapped
             );
+            //  Счётчик результатов
+            meterRegistry
+                    .counter("inventory.reservation.result",
+                            "result", mapped.name())
+                    .increment();
 
             return mapped;
 
         } catch (Exception e) {
+            meterRegistry
+                    .counter("inventory.reservation.errors")
+                    .increment();
             log.error(
                     "Lua reservation failed. stockKey={}, reservationKey={}",
                     stockKey, reservationKey, e
             );
-            return ReservationResult.FAILED;
+            throw e;
+        } finally {
+            sample.stop(
+                    Timer.builder("inventory.reservation.latency")
+                            .description("Lua reservation execution time")
+                            .publishPercentileHistogram()
+                            .register(meterRegistry)
+            );
         }
     }
 }
