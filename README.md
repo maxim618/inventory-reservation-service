@@ -1,3 +1,12 @@
+[![CI Status](https://shields.io)](https://github.com)
+[![License](https://shields.io)](https://github.com)
+
+![Java 17](https://shields.io)
+![Spring Boot](https://shields.io)
+![Testcontainers](https://shields.io)
+![PostgreSQL](https://shields.io)
+![Redis](https://shields.io)
+
 # Inventory Reservation Service
 
 High-load backend service that provides atomic inventory reservations
