@@ -1,11 +1,8 @@
-[![CI Status](https://shields.io)](https://github.com)
-[![License](https://shields.io)](https://github.com)
-
-![Java 17](https://shields.io)
-![Spring Boot](https://shields.io)
-![Testcontainers](https://shields.io)
-![PostgreSQL](https://shields.io)
-![Redis](https://shields.io)
+[![CI](https://github.com/maxim618/inventory-reservation-service/actions/workflows/ci.yml/badge.svg)](https://github.com/maxim618/inventory-reservation-service/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/maxim618/inventory-reservation-service)](https://github.com/maxim618/inventory-reservation-service/blob/main/LICENSE)
+![Java 17](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot 3.2.5](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=springboot&logoColor=white)
+![Testcontainers 1.19.7](https://img.shields.io/badge/Testcontainers-1.19.7-2496ED?logo=docker&logoColor=white)
 
 # Inventory Reservation Service
 
@@ -45,7 +42,7 @@ Key principles:
 
 ## Architecture
 
-Client → Reservation API → Redis (atomic ops) → PostgreSQL (persistence)
+Client --> Reservation API --> Redis (atomic ops) --> PostgreSQL (persistence)
 
 Redis is used for:
 - Atomic stock updates
