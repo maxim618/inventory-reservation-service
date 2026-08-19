@@ -25,4 +25,4 @@ jobs:
         run: docker info
 
       - name: Build and Test with Maven
-        run: mvn clean verify
+        run: ./mvnw clean verify
