@@ -1,8 +1,10 @@
 [![CI](https://github.com/maxim618/inventory-reservation-service/actions/workflows/ci.yml/badge.svg)](https://github.com/maxim618/inventory-reservation-service/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/maxim618/inventory-reservation-service)](https://github.com/maxim618/inventory-reservation-service/blob/main/LICENSE)
 ![Java 17](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot 3.2.5](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=springboot&logoColor=white)
 ![Testcontainers 1.19.7](https://img.shields.io/badge/Testcontainers-1.19.7-2496ED?logo=docker&logoColor=white)
+![Maven 3.9.9](https://img.shields.io/badge/Maven-3.9.9-C71A36?logo=apachemaven&logoColor=white)
+[![License](https://img.shields.io/github/license/maxim618/inventory-reservation-service)](https://github.com/maxim618/inventory-reservation-service/blob/main/LICENSE)
+
 
 # Inventory Reservation Service
 
